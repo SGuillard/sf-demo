@@ -1,0 +1,53 @@
+version: "2"
+
+networks:
+  frontend:
+    driver: ${NETWORKS_DRIVER}
+  backend:
+    driver: ${NETWORKS_DRIVER}
+
+services:
+
+  ## Apache Container ###
+  apache:
+    container_name: ${CONTAINER_NAME}_apache
+    restart: always
+    image: ${CONTAINER_NAME}_apache:${APACHE_VERSION}
+    build:
+      context: ${PATH_HOST}/apache
+      args:
+        APACHE_VERSION: ${APACHE_VERSION}
+    ports:
+      - 80:80
+    volumes:
+      - ${PATH_HOST}/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - ${PATH_HOST}/apache/vhosts:/usr/local/apache2/conf/vhosts
+      - ${PATH_HOST}/apache/crontab.txt:/etc/cron.d/eq-cron
+    volumes_from:
+      - php
+    networks:
+      - frontend
+      - backend
+
+  ### PHP Container ###
+  php:
+    container_name: ${CONTAINER_NAME}_php
+    restart: always
+    image: ${CONTAINER_NAME}_php:${PHP_VERSION}-${DEBIAN_VERSION}
+    build:
+      context: ${PATH_HOST}/php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+        DEBIAN_VERSION: ${DEBIAN_VERSION}
+        INSTALL_XDEBUG: ${INSTALL_XDEBUG}
+        INSTALL_OPCACHE: ${INSTALL_OPCACHE}
+        INSTALL_COMPOSER: ${INSTALL_COMPOSER}
+    expose:
+      - 9000
+    volumes:
+      - ../:/usr/local/apache2/htdocs
+      - ${PATH_HOST}/php/ini/php.ini:/usr/local/etc/php/php.ini:rw
+      - ${PATH_HOST}/php/ini/php-date.ini:/usr/local/etc/php/conf.d/date.ini:ro
+    networks:
+      - backend
+
